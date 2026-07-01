@@ -90,3 +90,17 @@ def test_logout_invalidates_token(client, user):
     assert response.status_code == 204
     # Le token n'existe plus
     assert not Token.objects.filter(key=token.key).exists()
+
+
+def test_export_data_returns_user_payload(client, user):
+    from rest_framework.authtoken.models import Token
+
+    token = Token.objects.create(user=user)
+    client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+    response = client.get("/api/accounts/export-data/")
+
+    assert response.status_code == 200
+    assert response.data["user"]["email"] == user.email
+    assert response.data["user"]["first_name"] == user.first_name
+    assert response.data["user"]["last_name"] == user.last_name
+    assert response.data["quizzes"] == []

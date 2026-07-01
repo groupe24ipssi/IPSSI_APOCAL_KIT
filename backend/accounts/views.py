@@ -16,6 +16,7 @@ import logging
 from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.contrib.auth.models import User
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -23,6 +24,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from quizzes.models import Quiz
 from .emails import EmailError, send_password_reset_email, send_verification_email
 from .models import get_or_create_profile
 from .serializers import (
@@ -303,3 +305,49 @@ class ChangePasswordView(APIView):
         Token.objects.filter(user=user).delete()
         token = Token.objects.create(user=user)
         return Response({"detail": "Mot de passe modifié.", "token": token.key})
+
+
+class ExportDataView(APIView):
+    """Exporte les données personnelles de l'utilisateur au format JSON."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: OpenApiResponse(description="Export JSON des données")})
+    def get(self, request):
+        user = request.user
+        quizzes = Quiz.objects.filter(user=user).prefetch_related("questions")
+
+        payload = {
+            "exported_at": timezone.now().isoformat(),
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "email_verified": get_or_create_profile(user).email_verified,
+            },
+            "quizzes": [
+                {
+                    "id": quiz.id,
+                    "title": quiz.title,
+                    "score": quiz.score,
+                    "created_at": quiz.created_at.isoformat(),
+                    "updated_at": quiz.updated_at.isoformat(),
+                    "source_text": quiz.source_text,
+                    "questions": [
+                        {
+                            "id": question.id,
+                            "index": question.index,
+                            "prompt": question.prompt,
+                            "options": question.options,
+                            "correct_index": question.correct_index,
+                            "selected_index": question.selected_index,
+                        }
+                        for question in quiz.questions.all()
+                    ],
+                }
+                for quiz in quizzes
+            ],
+        }
+        return Response(payload)

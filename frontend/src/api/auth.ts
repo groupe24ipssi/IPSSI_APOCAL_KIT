@@ -126,3 +126,9 @@ export async function deleteAccount(password: string): Promise<void> {
   await api.delete('/accounts/profile/', { data: { password } });
   clearToken();
 }
+
+/** Exporte les données personnelles de l'utilisateur courant au format JSON. */
+export async function exportUserData(): Promise<unknown> {
+  const { data } = await api.get('/accounts/export-data/');
+  return data;
+}

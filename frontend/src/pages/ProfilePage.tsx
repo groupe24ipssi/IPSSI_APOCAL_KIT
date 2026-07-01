@@ -17,7 +17,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { changePassword, deleteAccount, updateProfile } from '@/api/auth';
+import { changePassword, deleteAccount, exportUserData, updateProfile } from '@/api/auth';
 import { getApiErrorMessage } from '@/api/errors';
 
 export default function ProfilePage() {
@@ -45,6 +45,8 @@ export default function ProfilePage() {
   const [delConfirm, setDelConfirm] = useState(false);
   const [delErr, setDelErr] = useState<string | null>(null);
   const [delLoading, setDelLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportErr, setExportErr] = useState<string | null>(null);
 
   const handleInfo = async (e: FormEvent) => {
     e.preventDefault();
@@ -95,6 +97,27 @@ export default function ProfilePage() {
     } catch (err) {
       setDelErr(getApiErrorMessage(err, 'Suppression impossible.'));
       setDelLoading(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setExportErr(null);
+    setExportLoading(true);
+    try {
+      const payload = await exportUserData();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `apocal-export-${user?.id ?? 'user'}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportErr(getApiErrorMessage(err, 'Export impossible.'));
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -226,14 +249,19 @@ export default function ProfilePage() {
         <p className="text-sm text-slate-500 mb-4">
           Fonctionnalités à construire pendant la semaine APOCAL'IPSSI.
         </p>
+        {exportErr && (
+          <div className="mb-4 p-3 bg-rose-50 border-l-4 border-rose-500 text-sm text-rose-900 rounded">
+            {exportErr}
+          </div>
+        )}
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            disabled
-            title="À implémenter (J3-bis) — droit à la portabilité RGPD"
-            className="btn-secondary opacity-60 cursor-not-allowed"
+            onClick={handleExport}
+            disabled={exportLoading}
+            className="btn-secondary"
           >
-            Exporter mes données (bientôt)
+            {exportLoading ? 'Export en cours…' : 'Exporter mes données'}
           </button>
           <button
             type="button"
