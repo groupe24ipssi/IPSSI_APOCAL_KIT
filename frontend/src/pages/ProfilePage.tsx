@@ -100,16 +100,20 @@ export default function ProfilePage() {
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format: 'json' | 'csv' = 'json') => {
     setExportErr(null);
     setExportLoading(true);
     try {
-      const payload = await exportUserData();
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const payload = await exportUserData(format);
+      const blob =
+        format === 'csv'
+          ? (payload as Blob)
+          : new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const ext = format === 'csv' ? 'csv' : 'json';
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `apocal-export-${user?.id ?? 'user'}.json`;
+      link.download = `apocal-export-${user?.id ?? 'user'}.${ext}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -257,11 +261,19 @@ export default function ProfilePage() {
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={handleExport}
+            onClick={() => handleExport('json')}
             disabled={exportLoading}
             className="btn-secondary"
           >
-            {exportLoading ? 'Export en cours…' : 'Exporter mes données'}
+            {exportLoading ? 'Export en cours…' : 'Exporter (JSON)'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleExport('csv')}
+            disabled={exportLoading}
+            className="btn-secondary"
+          >
+            Exporter (CSV)
           </button>
           <button
             type="button"

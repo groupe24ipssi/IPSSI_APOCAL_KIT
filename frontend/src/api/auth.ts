@@ -127,8 +127,15 @@ export async function deleteAccount(password: string): Promise<void> {
   clearToken();
 }
 
-/** Exporte les données personnelles de l'utilisateur courant au format JSON. */
-export async function exportUserData(): Promise<unknown> {
+/** Exporte les données personnelles de l'utilisateur courant. */
+export async function exportUserData(format: 'json' | 'csv' = 'json'): Promise<unknown> {
+  if (format === 'csv') {
+    const { data } = await api.get('/accounts/export-data/', {
+      params: { format: 'csv' },
+      responseType: 'blob',
+    });
+    return data;
+  }
   const { data } = await api.get('/accounts/export-data/');
   return data;
 }
