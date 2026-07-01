@@ -4,7 +4,11 @@ Endpoints LLM :
     POST /api/llm/generate-quiz/  — génère un quiz à partir d'un PDF ou d'un texte
 """
 
+import logging
+
 import requests
+
+logger = logging.getLogger(__name__)
 from django.conf import settings
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
@@ -134,12 +138,21 @@ class GenerateQuizView(APIView):
             except PDFError as exc:
                 return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 2. Appel LLM (Ollama ou Mock)
-        try:
-            questions_data = get_llm_client().generate_quiz(source_text=source_text, title=title)
-        except LLMError as exc:
+        # 2. Appel LLM avec re-prompt (max 2 retries = 3 tentatives)
+        max_attempts = 3
+        last_error = None
+        for attempt in range(max_attempts):
+            try:
+                questions_data = get_llm_client().generate_quiz(
+                    source_text=source_text, title=title
+                )
+                break
+            except LLMError as exc:
+                last_error = exc
+                logger.warning("LLM attempt %d/%d failed: %s", attempt + 1, max_attempts, exc)
+        else:
             return Response(
-                {"detail": f"Échec génération LLM : {exc}"},
+                {"detail": f"Échec génération LLM après {max_attempts} tentatives : {last_error}"},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
