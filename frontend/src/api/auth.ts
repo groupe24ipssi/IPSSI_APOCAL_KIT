@@ -131,7 +131,7 @@ export async function deleteAccount(password: string): Promise<void> {
 export async function exportUserData(format: 'json' | 'csv' = 'json'): Promise<unknown> {
   if (format === 'csv') {
     const { data } = await api.get('/accounts/export-data/', {
-      params: { format: 'csv' },
+      params: { export_format: 'csv' },
       responseType: 'blob',
     });
     return data;

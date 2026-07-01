@@ -401,7 +401,7 @@ class ExportDataView(APIView):
         data_request.responded_at = timezone.now()
         data_request.save(update_fields=["exported_file_hash", "status", "responded_at"])
 
-        export_format = request.query_params.get("format", "json")
+        export_format = request.query_params.get("export_format", "json")
         if export_format == "csv":
             buf = io.StringIO()
             writer = csv.writer(buf)
