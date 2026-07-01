@@ -11,6 +11,8 @@ Endpoints d'authentification (Lot 3 : email-identifiant + validation + reset).
     POST /api/accounts/password-reset/confirm/   — définir le nouveau mot de passe
 """
 
+import hashlib
+import json
 import logging
 
 from django.contrib.auth import login as django_login
@@ -26,7 +28,7 @@ from rest_framework.views import APIView
 
 from quizzes.models import Quiz
 from .emails import EmailError, send_password_reset_email, send_verification_email
-from .models import get_or_create_profile
+from .models import DataRequest, get_or_create_profile
 from .serializers import (
     ChangePasswordSerializer,
     DeleteAccountSerializer,
@@ -317,6 +319,8 @@ class ExportDataView(APIView):
         user = request.user
         quizzes = Quiz.objects.filter(user=user).prefetch_related("questions")
 
+        data_request = DataRequest.objects.create(user=user, status=DataRequest.STATUS_IN_PROGRESS)
+
         payload = {
             "exported_at": timezone.now().isoformat(),
             "user": {
@@ -350,4 +354,12 @@ class ExportDataView(APIView):
                 for quiz in quizzes
             ],
         }
+        payload_bytes = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+        exported_file_hash = hashlib.sha256(payload_bytes).hexdigest()
+
+        data_request.exported_file_hash = exported_file_hash
+        data_request.status = DataRequest.STATUS_COMPLETED
+        data_request.responded_at = timezone.now()
+        data_request.save(update_fields=["exported_file_hash", "status", "responded_at"])
+
         return Response(payload)

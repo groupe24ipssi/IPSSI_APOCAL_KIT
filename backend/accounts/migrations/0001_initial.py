@@ -35,4 +35,44 @@ class Migration(migrations.Migration):
                 ),
             ],
         ),
+        migrations.CreateModel(
+            name="DataRequest",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("requested_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("received", "Reçue"),
+                            ("in_progress", "En cours"),
+                            ("completed", "Répondue"),
+                        ],
+                        default="received",
+                        max_length=20,
+                    ),
+                ),
+                ("responded_at", models.DateTimeField(blank=True, null=True)),
+                ("exported_file_hash", models.CharField(blank=True, default="", max_length=64)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        help_text="Utilisateur à l'origine de la demande d'export.",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="data_requests",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Demande d'export",
+                "verbose_name_plural": "Demandes d'export",
+                "ordering": ["-requested_at"],
+            },
+        ),
     ]

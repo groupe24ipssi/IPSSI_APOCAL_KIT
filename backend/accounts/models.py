@@ -34,6 +34,38 @@ class Profile(models.Model):
         return f"Profile<{self.user.email or self.user.username}>"
 
 
+class DataRequest(models.Model):
+    """Trace les demandes d'exportation de données personnelles."""
+
+    STATUS_RECEIVED = "received"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_COMPLETED = "completed"
+    STATUS_CHOICES = [
+        (STATUS_RECEIVED, "Reçue"),
+        (STATUS_IN_PROGRESS, "En cours"),
+        (STATUS_COMPLETED, "Répondue"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="data_requests",
+        help_text="Utilisateur à l'origine de la demande d'export.",
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_RECEIVED)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    exported_file_hash = models.CharField(max_length=64, blank=True, default="")
+
+    class Meta:
+        ordering = ["-requested_at"]
+        verbose_name = "Demande d'export"
+        verbose_name_plural = "Demandes d'export"
+
+    def __str__(self) -> str:
+        return f"DataRequest<{self.user.email or self.user.username} {self.status}>"
+
+
 def get_or_create_profile(user) -> Profile:
     """Récupère (ou crée) le profil d'un utilisateur.
 
