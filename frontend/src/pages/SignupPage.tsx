@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { signup } from '@/api/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSiteConfig } from '@/contexts/SiteConfigContext';
+import { useI18n } from '@/contexts/I18nContext';
 import { getApiErrorMessage } from '@/api/errors';
 
 export default function SignupPage() {
   const { refresh } = useAuth();
   const { config } = useSiteConfig();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -44,12 +46,10 @@ export default function SignupPage() {
       <div className="max-w-md mx-auto">
         <div className="card text-center">
           <div className="text-4xl mb-3">🔒</div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Inscriptions fermées</h1>
-          <p className="text-sm text-slate-500 mb-4">
-            Les inscriptions sont actuellement désactivées. Revenez plus tard.
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('signupClosedTitle')}</h1>
+          <p className="text-sm text-slate-500 mb-4">{t('signupClosedBody')}</p>
           <Link to="/login" className="text-indigo-600 hover:underline">
-            Déjà un compte ? Se connecter
+            {t('signupClosedLink')}
           </Link>
         </div>
       </div>
@@ -59,11 +59,11 @@ export default function SignupPage() {
   return (
     <div className="max-w-md mx-auto">
       <div className="card">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Créer un compte</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('signupTitle')}</h1>
         <p className="text-sm text-slate-500 mb-6">
-          Déjà inscrit ?{' '}
+          {t('signupSubtitle')}{' '}
           <Link to="/login" className="text-indigo-600 hover:underline">
-            Se connecter
+            {t('signupLinkLogin')}
           </Link>
         </p>
 
@@ -90,7 +90,8 @@ export default function SignupPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Prénom <span className="text-slate-400 font-normal">(facultatif)</span>
+                {t('signupFirstNameLabel')}{' '}
+                <span className="text-slate-400 font-normal">({t('signupFirstNameHint')})</span>
               </label>
               <input
                 type="text"
@@ -102,7 +103,8 @@ export default function SignupPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Nom <span className="text-slate-400 font-normal">(facultatif)</span>
+                {t('signupLastNameLabel')}{' '}
+                <span className="text-slate-400 font-normal">({t('signupLastNameHint')})</span>
               </label>
               <input
                 type="text"
@@ -116,8 +118,8 @@ export default function SignupPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Mot de passe
-              <span className="text-slate-400 font-normal"> (≥ 8 caractères)</span>
+              {t('signupPasswordLabel')}
+              <span className="text-slate-400 font-normal"> ({t('signupPasswordHint')})</span>
             </label>
             <input
               type="password"
@@ -131,7 +133,7 @@ export default function SignupPage() {
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? 'Création du compte…' : 'Créer mon compte'}
+            {loading ? t('signupSubmitting') : t('signupSubmit')}
           </button>
         </form>
       </div>

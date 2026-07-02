@@ -2,12 +2,14 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSiteConfig } from '@/contexts/SiteConfigContext';
+import { LanguageSwitcher, useI18n } from '@/contexts/I18nContext';
 import VerifyEmailBanner from '@/components/VerifyEmailBanner';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { config } = useSiteConfig();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -39,49 +41,51 @@ export default function Layout() {
             {user ? (
               <>
                 <Link to="/upload" className="text-slate-700 hover:text-indigo-600">
-                  Nouveau quiz
+                  {t('navNewQuiz')}
                 </Link>
                 <Link
                   to="/dashboard"
                   className="text-slate-700 hover:text-indigo-600 hidden sm:inline"
                 >
-                  Tableau de bord
+                  {t('navDashboard')}
                 </Link>
                 <Link
                   to="/review"
                   className="text-slate-700 hover:text-indigo-600 hidden sm:inline"
                 >
-                  Révision
+                  {t('navReview')}
                 </Link>
                 <Link to="/history" className="text-slate-700 hover:text-indigo-600">
-                  Historique
+                  {t('navHistory')}
                 </Link>
                 {user.is_staff && (
                   <Link to="/admin" className="text-amber-600 font-medium hover:text-amber-700">
-                    Admin
+                    {t('navAdmin')}
                   </Link>
                 )}
                 <span className="text-slate-500">|</span>
                 <Link
                   to="/profile"
                   className="text-slate-600 hover:text-indigo-600 hidden sm:inline"
-                  title="Mon profil"
+                  title={t('navProfileTitle')}
                 >
                   {user.first_name || user.email}
                 </Link>
+                <LanguageSwitcher />
                 <ThemeToggle theme={theme} onToggle={toggleTheme} />
                 <button onClick={handleLogout} className="btn-secondary">
-                  Déconnexion
+                  {t('navLogout')}
                 </button>
               </>
             ) : (
               <>
                 <Link to="/login" className="text-slate-700 hover:text-indigo-600">
-                  Connexion
+                  {t('navLogin')}
                 </Link>
                 <Link to="/signup" className="btn-primary">
-                  S'inscrire
+                  {t('navSignup')}
                 </Link>
+                <LanguageSwitcher />
                 <ThemeToggle theme={theme} onToggle={toggleTheme} />
               </>
             )}
@@ -108,16 +112,16 @@ export default function Layout() {
           {/* Liens légaux (pages à compléter par les étudiants) */}
           <nav className="flex flex-wrap gap-x-4 gap-y-1">
             <Link to="/legal/mentions-legales" className="hover:text-indigo-600">
-              Mentions légales
+              {t('navLegalMentions')}
             </Link>
             <Link to="/legal/confidentialite" className="hover:text-indigo-600">
-              Confidentialité
+              {t('navLegalPrivacy')}
             </Link>
             <Link to="/legal/cgu" className="hover:text-indigo-600">
-              CGU
+              {t('navLegalCgu')}
             </Link>
             <Link to="/legal/cookies" className="hover:text-indigo-600">
-              Cookies
+              {t('navLegalCookies')}
             </Link>
           </nav>
 
@@ -130,7 +134,7 @@ export default function Layout() {
                 rel="noopener noreferrer"
                 className="ml-1 text-indigo-600 hover:underline"
               >
-                Cours Agile
+                {t('footerCourse')}
               </a>
             </div>
             <div className="font-mono text-xs">CC BY-NC-SA 4.0</div>

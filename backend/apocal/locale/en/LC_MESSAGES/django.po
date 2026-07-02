@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: APOCAL'IPSSI 2026\n"
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Authentication credentials were not provided."
+msgstr "Authentication credentials were not provided."
+
+msgid "Unable to log in with provided credentials."
+msgstr "Unable to log in with provided credentials."
+
+msgid "This password is too common."
+msgstr "This password is too common."
+
+msgid "This password is too short."
+msgstr "This password is too short."
+
+msgid "This password is entirely numeric."
+msgstr "This password is entirely numeric."

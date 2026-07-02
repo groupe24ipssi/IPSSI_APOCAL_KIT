@@ -1,8 +1,10 @@
 """URLs racine du projet APOCAL'IPSSI."""
 
+from django.conf import settings
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
+from django.views.i18n import set_language
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -20,6 +22,7 @@ def health(_request):
 urlpatterns = [
     # Health
     path("health/", health, name="health"),
+    path("i18n/setlang/", set_language, name="set_language"),
     # Admin Django (utile en dev)
     path("admin/", admin.site.urls),
     # API — apps métier

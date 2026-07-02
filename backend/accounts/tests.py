@@ -6,6 +6,7 @@ Lancez : pytest accounts/
 
 import pytest
 from django.contrib.auth.models import User
+from django.utils import translation
 from rest_framework.test import APIClient
 
 pytestmark = pytest.mark.django_db
@@ -104,3 +105,14 @@ def test_export_data_returns_user_payload(client, user):
     assert response.data["user"]["first_name"] == user.first_name
     assert response.data["user"]["last_name"] == user.last_name
     assert response.data["quizzes"] == []
+
+
+def test_set_language_switches_to_french(client):
+    response = client.post(
+        "/i18n/setlang/",
+        {"language": "fr", "next": "/"},
+        follow=True,
+    )
+
+    assert response.status_code == 200
+    assert translation.get_language() == "fr"

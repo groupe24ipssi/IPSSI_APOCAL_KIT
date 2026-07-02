@@ -19,6 +19,7 @@ from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -58,7 +59,7 @@ class SignupView(APIView):
 
         if not SiteConfig.load().allow_signups:
             return Response(
-                {"detail": "Les inscriptions sont actuellement fermées."},
+                {"detail": _("Les inscriptions sont actuellement fermées.")},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -139,20 +140,20 @@ class VerifyEmailView(APIView):
         uid = read_email_verify_token(serializer.validated_data["token"])
         if uid is None:
             return Response(
-                {"detail": "Lien de validation invalide ou expiré."},
+                {"detail": _("Lien de validation invalide ou expiré.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:
             user = User.objects.get(pk=uid)
         except User.DoesNotExist:
             return Response(
-                {"detail": "Utilisateur introuvable."}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": _("Utilisateur introuvable.")}, status=status.HTTP_400_BAD_REQUEST
             )
 
         profile = get_or_create_profile(user)
         profile.email_verified = True
         profile.save(update_fields=["email_verified"])
-        return Response({"detail": "Adresse email confirmée avec succès."})
+        return Response({"detail": _("Adresse email confirmée avec succès.")})
 
 
 class ResendVerificationView(APIView):
@@ -163,12 +164,12 @@ class ResendVerificationView(APIView):
     @extend_schema(responses={200: OpenApiResponse(description="Email renvoyé")})
     def post(self, request):
         if get_or_create_profile(request.user).email_verified:
-            return Response({"detail": "Votre email est déjà confirmé."})
+            return Response({"detail": _("Votre email est déjà confirmé.")})
         try:
             send_verification_email(request.user)
         except EmailError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
-        return Response({"detail": "Email de validation renvoyé."})
+        return Response({"detail": _("Email de validation renvoyé.")})
 
 
 class PasswordResetRequestView(APIView):
@@ -222,13 +223,13 @@ class PasswordResetConfirmView(APIView):
         )
         if user is None:
             return Response(
-                {"detail": "Lien de réinitialisation invalide ou expiré."},
+                {"detail": _("Lien de réinitialisation invalide ou expiré.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         user.set_password(serializer.validated_data["new_password"])
         user.save(update_fields=["password"])
-        return Response({"detail": "Mot de passe réinitialisé. Vous pouvez vous connecter."})
+        return Response({"detail": _("Mot de passe réinitialisé. Vous pouvez vous connecter.")})
 
 
 # ---------------------------------------------------------------------------

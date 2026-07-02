@@ -6,6 +6,7 @@ Endpoints LLM :
 
 import requests
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -117,7 +118,7 @@ class GenerateQuizView(APIView):
             and not get_or_create_profile(request.user).email_verified
         ):
             return Response(
-                {"detail": "Veuillez confirmer votre adresse email avant de générer un quiz."},
+                {"detail": _("Veuillez confirmer votre adresse email avant de générer un quiz.")},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -139,7 +140,7 @@ class GenerateQuizView(APIView):
             questions_data = get_llm_client().generate_quiz(source_text=source_text, title=title)
         except LLMError as exc:
             return Response(
-                {"detail": f"Échec génération LLM : {exc}"},
+                {"detail": _("Échec génération LLM : %(error)s") % {"error": exc}},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
