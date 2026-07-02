@@ -10,6 +10,9 @@ class GenerateQuizSerializer(serializers.Serializer):
     requis.
     """
 
+    difficulty = serializers.ChoiceField(
+        choices=["easy", "medium", "hard"], default="medium"
+    )
     title = serializers.CharField(max_length=200)
     pdf = serializers.FileField(required=False)
     source_text = serializers.CharField(required=False, allow_blank=True)

@@ -11,6 +11,7 @@ export type Quiz = {
   id: number;
   title: string;
   source_text: string;
+  difficulty: string;
   score: number | null;
   created_at: string;
   questions: Question[];
@@ -19,6 +20,7 @@ export type Quiz = {
 export type QuizSummary = {
   id: number;
   title: string;
+  difficulty: string;
   score: number | null;
   nb_questions: number;
   created_at: string;

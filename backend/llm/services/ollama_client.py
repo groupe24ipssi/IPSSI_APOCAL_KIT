@@ -28,10 +28,10 @@ class OllamaLLMClient(LLMClient):
         # 8B sur CPU peut dépasser largement 120 s (cf. perturbation J2 latence).
         self.timeout = timeout or settings.OLLAMA_TIMEOUT
 
-    def generate_quiz(self, source_text: str, title: str) -> list[dict]:
+    def generate_quiz(self, source_text: str, title: str, difficulty: str = "medium") -> list[dict]:
         # Ollama /api/generate attend UN prompt unique (pas de séparation
         # system/user) : on concatène donc system + cours via build_full_prompt.
-        prompt = build_full_prompt(source_text, title)
+        prompt = build_full_prompt(source_text, title, difficulty)
         raw = self._call_ollama(prompt)
         return parse_and_validate_quiz(raw)
 

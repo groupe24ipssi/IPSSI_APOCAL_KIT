@@ -27,7 +27,7 @@ class QuizSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Quiz
-        fields = ["id", "title", "source_text", "score", "created_at", "questions"]
+        fields = ["id", "title", "source_text", "difficulty", "score", "created_at", "questions"]
         read_only_fields = ["id", "created_at"]
 
 
@@ -38,7 +38,7 @@ class QuizSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Quiz
-        fields = ["id", "title", "score", "nb_questions", "created_at"]
+        fields = ["id", "title", "difficulty", "score", "nb_questions", "created_at"]
 
     def get_nb_questions(self, obj: Quiz) -> int:
         return obj.questions.count()

@@ -21,6 +21,12 @@ class Quiz(models.Model):
     source_text = models.TextField(
         help_text="Texte source utilisé pour la génération (extrait PDF ou saisie).",
     )
+    difficulty = models.CharField(
+        max_length=10,
+        choices=[("easy", "Facile"), ("medium", "Moyen"), ("hard", "Difficile")],
+        default="medium",
+        help_text="Niveau de difficulté du quiz (choisi à la création).",
+    )
     score = models.IntegerField(
         null=True,
         blank=True,
