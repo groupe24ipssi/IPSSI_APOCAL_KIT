@@ -11,10 +11,13 @@ Endpoints d'authentification (Lot 3 : email-identifiant + validation + reset).
     POST /api/accounts/password-reset/confirm/   — définir le nouveau mot de passe
 """
 
+import csv
 import hashlib
+import io
 import json
 import logging
 
+from django.http import HttpResponse
 from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.contrib.auth.models import User
@@ -322,6 +325,8 @@ class ExportDataView(APIView):
 
         data_request = DataRequest.objects.create(user=user, status=DataRequest.STATUS_IN_PROGRESS)
 
+        data_requests_qs = DataRequest.objects.filter(user=user).exclude(pk=data_request.pk)
+
         payload = {
             "exported_at": timezone.now().isoformat(),
             "user": {
@@ -331,7 +336,12 @@ class ExportDataView(APIView):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "email_verified": get_or_create_profile(user).email_verified,
+                "date_joined": user.date_joined.isoformat(),
             },
+            "courses": [
+                {"title": quiz.title, "source_text": quiz.source_text}
+                for quiz in quizzes
+            ],
             "quizzes": [
                 {
                     "id": quiz.id,
@@ -354,6 +364,35 @@ class ExportDataView(APIView):
                 }
                 for quiz in quizzes
             ],
+            "responses": [
+                {
+                    "quiz_id": quiz.id,
+                    "quiz_title": quiz.title,
+                    "score": quiz.score,
+                    "questions": [
+                        {
+                            "index": q.index,
+                            "selected_index": q.selected_index,
+                            "correct_index": q.correct_index,
+                            "is_correct": q.selected_index == q.correct_index,
+                        }
+                        for q in quiz.questions.all()
+                        if q.selected_index is not None
+                    ],
+                }
+                for quiz in quizzes
+                if quiz.score is not None
+            ],
+            "reports": [],
+            "data_requests": [
+                {
+                    "id": dr.id,
+                    "requested_at": dr.requested_at.isoformat(),
+                    "status": dr.status,
+                    "responded_at": dr.responded_at.isoformat() if dr.responded_at else None,
+                }
+                for dr in data_requests_qs
+            ],
         }
         payload_bytes = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
         exported_file_hash = hashlib.sha256(payload_bytes).hexdigest()
@@ -362,5 +401,25 @@ class ExportDataView(APIView):
         data_request.status = DataRequest.STATUS_COMPLETED
         data_request.responded_at = timezone.now()
         data_request.save(update_fields=["exported_file_hash", "status", "responded_at"])
+
+        export_format = request.query_params.get("export_format", "json")
+        if export_format == "csv":
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(["email", "quiz_title", "score", "date", "nb_questions"])
+            for quiz in quizzes:
+                writer.writerow([
+                    user.email,
+                    quiz.title,
+                    quiz.score if quiz.score is not None else "",
+                    quiz.created_at.isoformat(),
+                    quiz.questions.count(),
+                ])
+            response = HttpResponse(buf.getvalue(), content_type="text/csv; charset=utf-8")
+            timestamp = timezone.now().strftime("%Y%m%d-%H%M%S")
+            response["Content-Disposition"] = (
+                f'attachment; filename="apocal-export-{user.id}-{timestamp}.csv"'
+            )
+            return response
 
         return Response(payload)

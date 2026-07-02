@@ -93,6 +93,25 @@ def test_logout_invalidates_token(client, user):
     assert not Token.objects.filter(key=token.key).exists()
 
 
+def test_export_does_not_leak_other_users_data(client):
+    alice = User.objects.create_user(username="alice_export", email="alice_export@test.com", password="pass123")
+    bob = User.objects.create_user(username="bob_export", email="bob_export@test.com", password="pass123")
+
+    from quizzes.models import Quiz
+    Quiz.objects.create(user=alice, title="Alice Quiz", source_text="x" * 200)
+    Quiz.objects.create(user=bob, title="Bob Quiz", source_text="y" * 200)
+
+    from rest_framework.authtoken.models import Token as AuthToken
+    token = AuthToken.objects.create(user=alice)
+    client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+    response = client.get("/api/accounts/export-data/")
+
+    assert response.status_code == 200
+    quiz_titles = [q["title"] for q in response.data["quizzes"]]
+    assert "Alice Quiz" in quiz_titles
+    assert "Bob Quiz" not in quiz_titles
+
+
 def test_export_data_returns_user_payload(client, user):
     from rest_framework.authtoken.models import Token
 
