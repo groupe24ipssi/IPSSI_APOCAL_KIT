@@ -68,20 +68,6 @@ export default function HomePage() {
           <p className="text-sm">{t('homeCardProgressBody')}</p>
         </div>
       </section>
-
-      <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded text-sm">
-        <strong className="text-slate-900">{t('homeKitMessage')}</strong> Ce frontend est
-        volontairement minimaliste — c'est à vous de l'enrichir pendant la semaine. Consultez le{' '}
-        <a
-          href="https://github.com/melafrit/IPSSI_APOCAL_KIT"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-indigo-600 underline"
-        >
-          README
-        </a>
-        .
-      </div>
     </div>
   );
 }

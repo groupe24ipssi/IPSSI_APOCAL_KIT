@@ -39,7 +39,7 @@ Les contenus pédagogiques importés par les utilisateurs demeurent leur propri�
   { title: 'Contact',
     content: `Pour toute question relative aux présentes mentions légales, à l'utilisation du site ou à toute demande d'ordre juridique, vous pouvez contacter l'éditeur à l'adresse suivante :
 
-Service juridique – EduNova Technologies SAS
+Service juridique – EduTutor IA
 contact@edututor.fr` },
 ];
 
