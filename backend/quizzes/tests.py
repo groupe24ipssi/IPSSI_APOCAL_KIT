@@ -1,4 +1,4 @@
-"""Tests pour l'app quizzes — K1 (list/detail) + K2 (answer)."""
+"""Tests pour l'app quizzes — K1 (list/detail) + K2 (answer) + partage (Lot 14)."""
 
 import pytest
 from django.contrib.auth.models import User
@@ -140,3 +140,118 @@ def test_answer_404_for_other_users_quiz(auth_client, other_user):
         format="json",
     )
     assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Lot 14 — Partage de quiz
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def public_quiz(user) -> Quiz:
+    quiz = Quiz.objects.create(
+        user=user,
+        title="Quiz public",
+        source_text="Partageable.",
+        is_public=True,
+    )
+    for i in range(1, 11):
+        Question.objects.create(
+            quiz=quiz,
+            index=i,
+            prompt=f"Q{i}",
+            options=["A", "B", "C", "D"],
+            correct_index=0,
+        )
+    return quiz
+
+
+class TestSharedQuizView:
+    def test_get_public_quiz_no_auth(self, public_quiz):
+        response = APIClient().get(f"/api/quizzes/shared/{public_quiz.share_token}/")
+        assert response.status_code == 200
+        assert response.data["title"] == "Quiz public"
+
+    def test_does_not_expose_correct_index(self, public_quiz):
+        response = APIClient().get(f"/api/quizzes/shared/{public_quiz.share_token}/")
+        assert response.status_code == 200
+        for q in response.data["questions"]:
+            assert "correct_index" not in q
+
+    def test_404_for_private_quiz(self, sample_quiz):
+        response = APIClient().get(f"/api/quizzes/shared/{sample_quiz.share_token}/")
+        assert response.status_code == 404
+
+    def test_404_for_invalid_token(self):
+        response = APIClient().get(
+            "/api/quizzes/shared/00000000-0000-0000-0000-000000000000/"
+        )
+        assert response.status_code == 404
+
+    def test_404_when_toggled_off(self, auth_client, user):
+        quiz = Quiz.objects.create(user=user, title="T", source_text="S", is_public=True)
+        token = quiz.share_token
+        auth_client.patch(f"/api/quizzes/{quiz.id}/", {"is_public": False}, format="json")
+        response = APIClient().get(f"/api/quizzes/shared/{token}/")
+        assert response.status_code == 404
+
+
+class TestSharedQuizAnswer:
+    def test_answer_public_quiz_no_auth(self, public_quiz):
+        answers = [{"index": i, "selected_index": 0} for i in range(1, 11)]
+        response = APIClient().post(
+            f"/api/quizzes/shared/{public_quiz.share_token}/answer/",
+            {"answers": answers},
+            format="json",
+        )
+        assert response.status_code == 200
+        assert response.data["score"] == 10
+
+    def test_does_not_persist_score(self, public_quiz):
+        answers = [{"index": i, "selected_index": 0} for i in range(1, 11)]
+        APIClient().post(
+            f"/api/quizzes/shared/{public_quiz.share_token}/answer/",
+            {"answers": answers},
+            format="json",
+        )
+        public_quiz.refresh_from_db()
+        assert public_quiz.score is None
+
+    def test_does_not_persist_selected_index(self, public_quiz):
+        answers = [{"index": i, "selected_index": 0} for i in range(1, 11)]
+        APIClient().post(
+            f"/api/quizzes/shared/{public_quiz.share_token}/answer/",
+            {"answers": answers},
+            format="json",
+        )
+        for q in public_quiz.questions.all():
+            assert q.selected_index is None
+
+
+class TestTogglePublic:
+    def test_owner_can_toggle_public(self, auth_client, sample_quiz):
+        resp = auth_client.patch(
+            f"/api/quizzes/{sample_quiz.id}/",
+            {"is_public": True},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data["is_public"] is True
+
+    def test_owner_can_toggle_off(self, auth_client, public_quiz):
+        resp = auth_client.patch(
+            f"/api/quizzes/{public_quiz.id}/",
+            {"is_public": False},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data["is_public"] is False
+
+    def test_non_owner_cannot_toggle(self, auth_client, other_user):
+        quiz = Quiz.objects.create(user=other_user, title="X", source_text="Y")
+        resp = auth_client.patch(
+            f"/api/quizzes/{quiz.id}/",
+            {"is_public": True},
+            format="json",
+        )
+        assert resp.status_code == 404

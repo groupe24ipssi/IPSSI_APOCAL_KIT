@@ -27,8 +27,11 @@ class QuizSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Quiz
-        fields = ["id", "title", "source_text", "difficulty", "score", "created_at", "questions"]
-        read_only_fields = ["id", "created_at"]
+        fields = [
+            "id", "title", "source_text", "difficulty", "score",
+            "created_at", "is_public", "share_token", "questions",
+        ]
+        read_only_fields = ["id", "created_at", "share_token"]
 
 
 class QuizSummarySerializer(serializers.ModelSerializer):
@@ -38,7 +41,7 @@ class QuizSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Quiz
-        fields = ["id", "title", "difficulty", "score", "nb_questions", "created_at"]
+        fields = ["id", "title", "difficulty", "score", "nb_questions", "created_at", "is_public", "share_token"]
 
     def get_nb_questions(self, obj: Quiz) -> int:
         return obj.questions.count()
@@ -63,3 +66,19 @@ class SubmitAnswersSerializer(serializers.Serializer):
         if indices != list(range(1, 11)):
             raise serializers.ValidationError("Les indices doivent couvrir 1..10 sans doublon.")
         return value
+
+
+class QuizPublicSerializer(serializers.ModelSerializer):
+    """Quiz accessible publiquement — questions sans la bonne réponse."""
+
+    questions = QuestionPublicSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Quiz
+        fields = ["id", "title", "source_text", "difficulty", "created_at", "is_public", "questions"]
+
+
+class QuizTogglePublicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Quiz
+        fields = ["is_public"]

@@ -6,6 +6,8 @@ Un Quiz appartient à un utilisateur ; il contient le texte source du cours
 1 bonne réponse).
 """
 
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -34,6 +36,16 @@ class Quiz(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Quiz accessible publiquement via lien de partage.",
+    )
+    share_token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        help_text="Token unique pour le lien de partage public.",
+    )
 
     class Meta:
         ordering = ["-created_at"]

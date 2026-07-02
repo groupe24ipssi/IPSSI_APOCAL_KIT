@@ -1,48 +1,45 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  getQuiz,
-  submitAnswers,
-  toggleQuizPublic,
-  type Quiz,
+  getSharedQuiz,
+  submitSharedQuiz,
+  type PublicQuiz,
   type AnswerResult,
 } from '@/api/quizzes';
 
-export default function QuizPage() {
-  const { id } = useParams<{ id: string }>();
-  const quizId = Number(id);
+export default function SharedQuizPage() {
+  const { token } = useParams<{ token: string }>();
 
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [quiz, setQuiz] = useState<PublicQuiz | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [result, setResult] = useState<AnswerResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [togglingPublic, setTogglingPublic] = useState(false);
 
   useEffect(() => {
+    if (!token) return;
     setLoading(true);
-    getQuiz(quizId)
+    getSharedQuiz(token)
       .then(setQuiz)
-      .catch(() => setError('Impossible de charger ce quiz.'))
+      .catch(() => setError('Ce quiz est introuvable ou n\'est plus public.'))
       .finally(() => setLoading(false));
-  }, [quizId]);
+  }, [token]);
 
   const handleSelect = (questionIndex: number, optionIndex: number) => {
-    if (result) return; // déjà soumis
+    if (result) return;
     setAnswers((prev) => ({ ...prev, [questionIndex]: optionIndex }));
   };
 
   const handleSubmit = async () => {
-    if (!quiz || Object.keys(answers).length !== 10) return;
+    if (!quiz || Object.keys(answers).length !== 10 || !token) return;
     setSubmitting(true);
     try {
       const payload = quiz.questions.map((q) => ({
         index: q.index,
         selected_index: answers[q.index]!,
       }));
-      const res = await submitAnswers(quiz.id, payload);
+      const res = await submitSharedQuiz(token, payload);
       setResult(res);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
@@ -52,85 +49,29 @@ export default function QuizPage() {
     }
   };
 
-  const handleTogglePublic = async () => {
-    if (!quiz) return;
-    setTogglingPublic(true);
-    try {
-      await toggleQuizPublic(quiz.id, !quiz.is_public);
-      setQuiz((prev) => (prev ? { ...prev, is_public: !prev.is_public } : prev));
-    } catch {
-      // ignore
-    } finally {
-      setTogglingPublic(false);
-    }
-  };
-
-  const handleCopyLink = () => {
-    if (!quiz) return;
-    const link = `${window.location.origin}/share/${quiz.share_token}`;
-    navigator.clipboard.writeText(link).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
   if (loading) return <p className="text-slate-500">Chargement du quiz…</p>;
-  if (error) return <p className="text-rose-600">{error}</p>;
+  if (error)
+    return (
+      <div className="max-w-lg mx-auto text-center space-y-4 mt-12">
+        <p className="text-rose-600">{error}</p>
+        <Link to="/" className="text-indigo-600 hover:underline text-sm">
+          Retour à l'accueil
+        </Link>
+      </div>
+    );
   if (!quiz) return null;
 
   const allAnswered = Object.keys(answers).length === 10;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* En-tête */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">{quiz.title}</h1>
         <p className="text-sm text-slate-500">
-          Quiz #{quiz.id} · {quiz.questions.length} questions
+          Quiz partagé · {quiz.questions.length} questions
         </p>
       </div>
 
-      {/* Partager */}
-      <div className="card">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-slate-700">Partager</span>
-            <button
-              type="button"
-              onClick={handleTogglePublic}
-              disabled={togglingPublic}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                quiz.is_public ? 'bg-indigo-600' : 'bg-slate-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  quiz.is_public ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            <span className="text-sm text-slate-500">
-              {togglingPublic ? '…' : quiz.is_public ? 'Public' : 'Privé'}
-            </span>
-          </div>
-          {quiz.is_public && (
-            <div className="flex items-center gap-2">
-              <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 truncate max-w-[280px]">
-                {window.location.origin}/share/{quiz.share_token}
-              </code>
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="text-xs px-3 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition"
-              >
-                {copied ? 'Copié !' : 'Copier'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Résultat */}
       {result && (
         <div
           className={`card border-l-4 ${
@@ -146,20 +87,16 @@ export default function QuizPage() {
           </h2>
           <p className="text-slate-700">
             {result.score === 10
-              ? '🎉 Sans-faute ! Tu maitrises ce chapitre.'
+              ? 'Sans-faute ! Tu maîtrises ce chapitre.'
               : result.score >= 7
-                ? '👍 Bon résultat. Revois les questions ratées en bas de page.'
+                ? 'Bon résultat. Revois les questions ratées en bas de page.'
                 : result.score >= 4
-                  ? "📚 Tu as les bases, mais des révisions s'imposent."
-                  : '⚠️ Il faut reprendre le cours en profondeur.'}
+                  ? "Tu as les bases, mais des révisions s'imposent."
+                  : 'Il faut reprendre le cours en profondeur.'}
           </p>
-          <Link to="/history" className="btn-secondary mt-4 inline-flex">
-            Retour à l'historique
-          </Link>
         </div>
       )}
 
-      {/* Questions */}
       {quiz.questions.map((q) => {
         const userChoice = answers[q.index];
         const detail = result?.details.find((d) => d.index === q.index);
@@ -173,7 +110,7 @@ export default function QuizPage() {
             <div className="space-y-2">
               {q.options.map((opt, optIdx) => {
                 const isSelected = userChoice === optIdx;
-                const isCorrect = detail && q.correct_index === optIdx;
+                const isCorrect = detail && detail.correct_index === optIdx;
                 const isWrongPick = detail && isSelected && !detail.correct;
 
                 let cls = 'border-slate-200 hover:bg-slate-50';
@@ -211,7 +148,6 @@ export default function QuizPage() {
         );
       })}
 
-      {/* Soumission */}
       {!result && (
         <button
           onClick={handleSubmit}
@@ -221,10 +157,16 @@ export default function QuizPage() {
           {submitting
             ? 'Correction en cours…'
             : allAnswered
-              ? '🎯 Soumettre mes réponses'
+              ? 'Soumettre mes réponses'
               : `Répondre à toutes les questions (${Object.keys(answers).length}/10)`}
         </button>
       )}
+
+      <div className="text-center">
+        <Link to="/signup" className="text-indigo-600 hover:underline text-sm">
+          Crée ton compte EduTutor pour sauvegarder tes quiz
+        </Link>
+      </div>
     </div>
   );
 }
