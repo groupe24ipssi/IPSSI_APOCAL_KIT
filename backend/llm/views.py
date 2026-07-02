@@ -129,6 +129,7 @@ class GenerateQuizView(APIView):
         serializer = GenerateQuizSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         title = serializer.validated_data["title"]
+        difficulty = serializer.validated_data.get("difficulty", "medium")
         pdf_file = serializer.validated_data.get("pdf")
         source_text = (serializer.validated_data.get("source_text") or "").strip()
 
@@ -145,7 +146,7 @@ class GenerateQuizView(APIView):
         for attempt in range(max_attempts):
             try:
                 questions_data = get_llm_client().generate_quiz(
-                    source_text=source_text, title=title
+                    source_text=source_text, title=title, difficulty=difficulty
                 )
                 break
             except LLMError as exc:
@@ -164,6 +165,7 @@ class GenerateQuizView(APIView):
             quiz = Quiz.objects.create(
                 user=request.user,
                 title=title,
+                difficulty=difficulty,
                 source_text=source_text,
             )
             for i, q in enumerate(questions_data, start=1):

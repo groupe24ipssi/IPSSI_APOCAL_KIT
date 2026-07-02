@@ -2,6 +2,18 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listQuizzes, type QuizSummary } from '@/api/quizzes';
 
+const DIFFICULTY_LABELS: Record<string, string> = {
+  easy: 'Facile',
+  medium: 'Moyen',
+  hard: 'Difficile',
+};
+
+const DIFFICULTY_CLASSES: Record<string, string> = {
+  easy: 'bg-emerald-100 text-emerald-700',
+  medium: 'bg-amber-100 text-amber-700',
+  hard: 'bg-rose-100 text-rose-700',
+};
+
 export default function HistoryPage() {
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +64,13 @@ export default function HistoryPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className="font-mono text-xs text-slate-500">
                   #{q.id} · {new Date(q.created_at).toLocaleDateString('fr-FR')}
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    DIFFICULTY_CLASSES[q.difficulty] ?? 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {DIFFICULTY_LABELS[q.difficulty] ?? q.difficulty}
                 </span>
                 {q.score !== null && (
                   <span

@@ -25,7 +25,50 @@ MAX_SOURCE_CHARS = 8000
 SOURCE_TAG_OPEN = "<source_document>"
 SOURCE_TAG_CLOSE = "</source_document>"
 
-SYSTEM_PROMPT = f"""Tu es un assistant pédagogique multilingue spécialisé en
+_DIFFICULTY_PROMPTS = {
+    "easy": (
+        "NIVEAU DE DIFFICULTÉ : FACILE.\n"
+        "Génère des questions pour un élève débutant qui vient de découvrir le sujet.\n"
+        "Type de questions à produire :\n"
+        "- Questions de définition : « Qu'est-ce que X ? »\n"
+        "- Questions de reconnaissance : « Quelle commande permet de... ? »\n"
+        "- Questions de vocabulaire : « Comment appelle-t-on... ? »\n"
+        "- Chaque question ne teste qu'un seul concept simple.\n"
+        "- Les 3 distracteurs doivent être des réponses clairement fausses,\n"
+        "  venant de sujets différents de la bonne réponse (pas de piège).\n"
+        "- Un élève qui a lu le cours une fois doit pouvoir répondre juste\n"
+        "  sans hésitation.\n"
+    ),
+    "medium": (
+        "NIVEAU DE DIFFICULTÉ : MOYEN.\n"
+        "Génère des questions pour un élève qui a compris le cours et sait\n"
+        "l'appliquer.\n"
+        "Type de questions à produire :\n"
+        "- Questions de compréhension : « Pourquoi X est-il important ? »\n"
+        "- Questions d'application : « Dans quelle situation utilise-t-on X ? »\n"
+        "- Questions de distinction : « Quelle est la différence entre X et Y ? »\n"
+        "- Les distracteurs doivent être plausibles et crédibles, mais une seule\n"
+        "  réponse est correcte d'après le cours.\n"
+    ),
+    "hard": (
+        "NIVEAU DE DIFFICULTÉ : DIFFICILE.\n"
+        "Génère des questions pour un élève avancé capable d'analyser et de\n"
+        "raisonner sur le contenu.\n"
+        "Type de questions à produire (varie les types) :\n"
+        "- Questions d'analyse : « Parmi les affirmations suivantes, laquelle est\n"
+        "  FAUSSE / laquelle est la PLUS précise ? »\n"
+        "- Mises en situation : « Un développeur rencontre le problème suivant...\n"
+        "  Quelle est la meilleure approche ? »\n"
+        "- Pièges subtils : « Que se passe-t-il si on fait X au lieu de Y ? »\n"
+        "- Questions à double détente : il faut comprendre deux notions\n"
+        "  simultanément pour répondre.\n"
+        "- Au moins 2 distracteurs doivent être très proches de la bonne réponse\n"
+        "  (nuance fine, différence d'un seul mot, ordre inversé, etc.).\n"
+        "- L'élève doit vraiment réfléchir, pas juste reconnaître la réponse.\n"
+    ),
+}
+
+_COMMON_RULES = f"""Tu es un assistant pédagogique multilingue spécialisé en
 génération de QCM. À partir du cours fourni, tu génères exactement 10 questions
 à choix multiples pour aider un étudiant à réviser.
 
@@ -57,6 +100,19 @@ Format de sortie :
   ]
 }}
 """
+
+
+def build_system_prompt(difficulty: str) -> str:
+    """Retourne le prompt système complet adapté au niveau de difficulté.
+
+    Le niveau de difficulté est placé EN PREMIER pour maximiser son poids
+    dans l'attention du modèle (primacy effect), suivi des règles communes.
+    """
+    difficulty_prompt = _DIFFICULTY_PROMPTS.get(difficulty)
+    if difficulty_prompt is None:
+        logger.warning("Niveau de difficulté inconnu '%s', fallback sur 'medium'.", difficulty)
+        difficulty_prompt = _DIFFICULTY_PROMPTS["medium"]
+    return difficulty_prompt + "\n\n" + _COMMON_RULES
 
 
 def sanitize_source_text(text: str) -> str:
@@ -105,10 +161,10 @@ def build_user_prompt(source_text: str, title: str) -> str:
     )
 
 
-def build_full_prompt(source_text: str, title: str) -> str:
+def build_full_prompt(source_text: str, title: str, difficulty: str = "medium") -> str:
     """Prompt complet (system + user) pour les API « completion » simples
     comme Ollama /api/generate qui n'ont pas de séparation system/user native."""
-    return f"{SYSTEM_PROMPT}\n\n{build_user_prompt(source_text, title)}"
+    return f"{build_system_prompt(difficulty)}\n\n{build_user_prompt(source_text, title)}"
 
 
 def parse_and_validate_quiz(raw: str) -> list[dict]:

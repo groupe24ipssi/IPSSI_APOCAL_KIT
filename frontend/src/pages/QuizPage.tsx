@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getQuiz, submitAnswers, type Quiz, type AnswerResult } from '@/api/quizzes';
+import {
+  getQuiz,
+  submitAnswers,
+  toggleQuizPublic,
+  type Quiz,
+  type AnswerResult,
+} from '@/api/quizzes';
 
 export default function QuizPage() {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +18,8 @@ export default function QuizPage() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [togglingPublic, setTogglingPublic] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -44,6 +52,28 @@ export default function QuizPage() {
     }
   };
 
+  const handleTogglePublic = async () => {
+    if (!quiz) return;
+    setTogglingPublic(true);
+    try {
+      await toggleQuizPublic(quiz.id, !quiz.is_public);
+      setQuiz((prev) => (prev ? { ...prev, is_public: !prev.is_public } : prev));
+    } catch {
+      // ignore
+    } finally {
+      setTogglingPublic(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (!quiz) return;
+    const link = `${window.location.origin}/share/${quiz.share_token}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   if (loading) return <p className="text-slate-500">Chargement du quiz…</p>;
   if (error) return <p className="text-rose-600">{error}</p>;
   if (!quiz) return null;
@@ -58,6 +88,46 @@ export default function QuizPage() {
         <p className="text-sm text-slate-500">
           Quiz #{quiz.id} · {quiz.questions.length} questions
         </p>
+      </div>
+
+      {/* Partager */}
+      <div className="card">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-slate-700">Partager</span>
+            <button
+              type="button"
+              onClick={handleTogglePublic}
+              disabled={togglingPublic}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                quiz.is_public ? 'bg-indigo-600' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  quiz.is_public ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className="text-sm text-slate-500">
+              {togglingPublic ? '…' : quiz.is_public ? 'Public' : 'Privé'}
+            </span>
+          </div>
+          {quiz.is_public && (
+            <div className="flex items-center gap-2">
+              <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 truncate max-w-[280px]">
+                {window.location.origin}/share/{quiz.share_token}
+              </code>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="text-xs px-3 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition"
+              >
+                {copied ? 'Copié !' : 'Copier'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Résultat */}

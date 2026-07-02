@@ -16,7 +16,7 @@ import requests
 from django.conf import settings
 
 from .base import LLMClient, LLMError
-from .quiz_prompt import SYSTEM_PROMPT, build_user_prompt, parse_and_validate_quiz
+from .quiz_prompt import build_system_prompt, build_user_prompt, parse_and_validate_quiz
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -37,13 +37,13 @@ class AnthropicLLMClient(LLMClient):
                 "LLM_BACKEND=ollama (gratuit, local) pour le développement."
             )
 
-    def generate_quiz(self, source_text: str, title: str) -> list[dict]:
-        raw = self._call_anthropic(source_text, title)
+    def generate_quiz(self, source_text: str, title: str, difficulty: str = "medium") -> list[dict]:
+        raw = self._call_anthropic(source_text, title, difficulty)
         return parse_and_validate_quiz(raw)
 
     # ----- internals -----
 
-    def _call_anthropic(self, source_text: str, title: str) -> str:
+    def _call_anthropic(self, source_text: str, title: str, difficulty: str) -> str:
         try:
             response = requests.post(
                 ANTHROPIC_URL,
@@ -55,7 +55,7 @@ class AnthropicLLMClient(LLMClient):
                 json={
                     "model": self.model,
                     "max_tokens": 4096,  # obligatoire chez Anthropic ; large pour 10 QCM
-                    "system": SYSTEM_PROMPT,  # consignes isolées du contenu utilisateur
+                    "system": build_system_prompt(difficulty),  # consignes isolées du contenu utilisateur
                     "messages": [
                         {"role": "user", "content": build_user_prompt(source_text, title)},
                     ],

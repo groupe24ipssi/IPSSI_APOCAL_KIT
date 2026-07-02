@@ -16,7 +16,7 @@ import requests
 from django.conf import settings
 
 from .base import LLMClient, LLMError
-from .quiz_prompt import SYSTEM_PROMPT, build_user_prompt, parse_and_validate_quiz
+from .quiz_prompt import build_system_prompt, build_user_prompt, parse_and_validate_quiz
 
 # L'API Gemini place le nom du modèle dans l'URL : .../models/<MODEL>:generateContent
 GEMINI_URL_TEMPLATE = (
@@ -40,13 +40,13 @@ class GeminiLLMClient(LLMClient):
                 "(gratuit, local) pour le développement."
             )
 
-    def generate_quiz(self, source_text: str, title: str) -> list[dict]:
-        raw = self._call_gemini(source_text, title)
+    def generate_quiz(self, source_text: str, title: str, difficulty: str = "medium") -> list[dict]:
+        raw = self._call_gemini(source_text, title, difficulty)
         return parse_and_validate_quiz(raw)
 
     # ----- internals -----
 
-    def _call_gemini(self, source_text: str, title: str) -> str:
+    def _call_gemini(self, source_text: str, title: str, difficulty: str) -> str:
         url = GEMINI_URL_TEMPLATE.format(model=self.model)
         try:
             response = requests.post(
@@ -58,7 +58,7 @@ class GeminiLLMClient(LLMClient):
                 },
                 json={
                     # Consignes système isolées du contenu utilisateur.
-                    "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+                    "system_instruction": {"parts": [{"text": build_system_prompt(difficulty)}]},
                     "contents": [{"parts": [{"text": build_user_prompt(source_text, title)}]}],
                     "generationConfig": {
                         "temperature": 0.4,

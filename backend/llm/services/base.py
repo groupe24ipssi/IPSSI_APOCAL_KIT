@@ -12,7 +12,7 @@ class LLMClient(ABC):
     """
 
     @abstractmethod
-    def generate_quiz(self, source_text: str, title: str) -> list[dict]:
+    def generate_quiz(self, source_text: str, title: str, difficulty: str = "medium") -> list[dict]:
         """Renvoie 10 questions QCM générées à partir du texte source.
 
         Raises:

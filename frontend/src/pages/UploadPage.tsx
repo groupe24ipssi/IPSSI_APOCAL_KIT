@@ -6,6 +6,7 @@ import { getApiErrorMessage } from '@/api/errors';
 export default function UploadPage() {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [mode, setMode] = useState<'pdf' | 'text'>('text');
   const [pdf, setPdf] = useState<File | null>(null);
   const [sourceText, setSourceText] = useState('');
@@ -19,6 +20,7 @@ export default function UploadPage() {
     try {
       const quiz = await generateQuiz({
         title,
+        difficulty,
         pdf: mode === 'pdf' ? (pdf ?? undefined) : undefined,
         source_text: mode === 'text' ? sourceText : undefined,
       });
@@ -44,6 +46,32 @@ export default function UploadPage() {
       )}
 
       <form onSubmit={handleSubmit} className="card space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Niveau de difficulté</label>
+          <div className="flex gap-2">
+            {(
+              [
+                ['easy', 'Facile'],
+                ['medium', 'Moyen'],
+                ['hard', 'Difficile'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setDifficulty(value)}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition ${
+                  difficulty === value
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Titre du cours</label>
           <input

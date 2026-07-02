@@ -2,21 +2,26 @@
 Endpoints quizz :
     GET   /api/quizzes/                — historique du user connecté
     GET   /api/quizzes/<id>/           — détail (avec les 10 questions)
+    PATCH /api/quizzes/<id>/           — toggle is_public (propriétaire)
     POST  /api/quizzes/<id>/answer/    — soumet 10 réponses, renvoie le score
+    GET   /api/quizzes/shared/<token>/ — quiz partagé (public)
+    POST  /api/quizzes/shared/<token>/answer/ — répondre à un quiz partagé
 """
 
 from django.db.models import Avg, Count, F, Max
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Question, Quiz
 from .serializers import (
+    QuizPublicSerializer,
     QuizSerializer,
     QuizSummarySerializer,
+    QuizTogglePublicSerializer,
     SubmitAnswersSerializer,
 )
 
@@ -35,14 +40,26 @@ class QuizListView(generics.ListAPIView):
         return super().get(request, *args, **kwargs)
 
 
-class QuizDetailView(generics.RetrieveAPIView):
-    """Détail d'un quiz (les 10 questions complètes)."""
+class QuizDetailView(generics.RetrieveUpdateAPIView):
+    """Détail d'un quiz (GET) et toggle visibilité (PATCH)."""
 
-    serializer_class = QuizSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Quiz.objects.filter(user=self.request.user)
+
+    def get_serializer_class(self):
+        if self.request.method in ("PATCH", "PUT"):
+            return QuizTogglePublicSerializer
+        return QuizSerializer
+
+    @extend_schema(
+        request=QuizTogglePublicSerializer,
+        responses={200: QuizSerializer},
+        description="Active/désactive le partage public du quiz.",
+    )
+    def patch(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
 
 
 class AnswerQuizView(APIView):
@@ -189,3 +206,61 @@ class MistakesView(APIView):
             for q in wrong
         ]
         return Response({"count": len(items), "mistakes": items})
+
+
+# ---------------------------------------------------------------------------
+# MVP2 — Partage de quiz (Lot 14)
+# ---------------------------------------------------------------------------
+
+
+class SharedQuizView(generics.RetrieveAPIView):
+    """Quiz accessible publiquement via share_token — questions sans correct_index."""
+
+    serializer_class = QuizPublicSerializer
+    permission_classes = [AllowAny]
+    lookup_field = "share_token"
+    lookup_url_kwarg = "token"
+    queryset = Quiz.objects.filter(is_public=True)
+
+
+class SharedQuizAnswerView(APIView):
+    """Répondre à un quiz partagé — aucune persistance, score seul."""
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=SubmitAnswersSerializer,
+        responses={200: OpenApiResponse(description="{ score, total, details }")},
+        description="Soumet les réponses à un quiz partagé (non persisté).",
+    )
+    def post(self, request, token: str):
+        quiz = get_object_or_404(Quiz, share_token=token, is_public=True)
+
+        serializer = SubmitAnswersSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        answers = serializer.validated_data["answers"]
+
+        questions_by_idx = {q.index: q for q in quiz.questions.all()}
+        if len(questions_by_idx) != 10:
+            return Response(
+                {"detail": "Ce quiz n'a pas 10 questions — état incohérent."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        details = []
+        score = 0
+        for ans in answers:
+            q = questions_by_idx[ans["index"]]
+            correct = q.correct_index == ans["selected_index"]
+            if correct:
+                score += 1
+            details.append(
+                {
+                    "index": ans["index"],
+                    "selected_index": ans["selected_index"],
+                    "correct_index": q.correct_index,
+                    "correct": correct,
+                }
+            )
+
+        return Response({"score": score, "total": 10, "details": details})

@@ -11,17 +11,23 @@ export type Quiz = {
   id: number;
   title: string;
   source_text: string;
+  difficulty: string;
   score: number | null;
   created_at: string;
+  is_public: boolean;
+  share_token: string;
   questions: Question[];
 };
 
 export type QuizSummary = {
   id: number;
   title: string;
+  difficulty: string;
   score: number | null;
   nb_questions: number;
   created_at: string;
+  is_public: boolean;
+  share_token: string;
 };
 
 type PaginatedQuizzes = {
@@ -104,5 +110,46 @@ export async function getStats(): Promise<Stats> {
 /** Liste des questions ratées (pour la révision des erreurs). */
 export async function getMistakes(): Promise<{ count: number; mistakes: Mistake[] }> {
   const { data } = await api.get<{ count: number; mistakes: Mistake[] }>('/quizzes/mistakes/');
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// MVP2 (Lot 14) — Partage de quiz
+// ---------------------------------------------------------------------------
+
+export type PublicQuestion = {
+  index: number;
+  prompt: string;
+  options: string[];
+};
+
+export type PublicQuiz = {
+  id: number;
+  title: string;
+  source_text: string;
+  difficulty: string;
+  created_at: string;
+  is_public: boolean;
+  questions: PublicQuestion[];
+};
+
+/** Active/désactive le partage public du quiz. */
+export async function toggleQuizPublic(id: number, isPublic: boolean): Promise<Quiz> {
+  const { data } = await api.patch<Quiz>(`/quizzes/${id}/`, { is_public: isPublic });
+  return data;
+}
+
+/** Récupère un quiz par son token de partage (sans auth). */
+export async function getSharedQuiz(token: string): Promise<PublicQuiz> {
+  const { data } = await api.get<PublicQuiz>(`/quizzes/shared/${token}/`);
+  return data;
+}
+
+/** Soumet les réponses à un quiz partagé (sans auth, non persisté). */
+export async function submitSharedQuiz(
+  token: string,
+  answers: { index: number; selected_index: number }[],
+): Promise<AnswerResult> {
+  const { data } = await api.post<AnswerResult>(`/quizzes/shared/${token}/answer/`, { answers });
   return data;
 }
